@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef ENABLE_NEOPIXEL
-  #include <Adafruit_NeoPixel.h>
-#endif
-
 #include <Automaton.h>
 #include "CoreLogging.h"
 #include "CoreSettings.h"
