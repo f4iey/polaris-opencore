@@ -136,20 +136,20 @@ void CoreSettings::loadDefaultColors()
 
 void CoreSettings::readFromStore()
 {
-  if (!SerialFlash.ready())
+  if (!SD.mediaPresent())
   {
-    CoreLogging::writeLine("CoreSettings: ERROR, readFromStore, SeriaFlash Not Ready");
+    CoreLogging::writeLine("CoreSettings: ERROR, readFromStore, Sd Not Ready");
     return;
   }
 
-  if (!SerialFlash.exists(configFilename))
+  if (!SD.exists(configFilename))
   {
     CoreLogging::writeLine("CoreSettings: Config file %s does not exist.", configFilename);
     loadDefaults();
     return;
   }
 
-  SerialFlashFile file = SerialFlash.open(configFilename);
+  File file = SD.open(configFilename);
   StaticJsonDocument<16384> doc;
   char buffer[16384];
 
@@ -251,23 +251,25 @@ void CoreSettings::readFromStore()
 }
 void CoreSettings::saveToStore()
 {
-  if (!SerialFlash.ready())
+  if (!SD.mediaPresent())
   {
     CoreLogging::writeLine("CoreSettings: ERROR, saveToStore, SeriaFlash Not Ready");
     return;
   }
 
-  if (!SerialFlash.exists(configFilename))
+  if (!SD.exists(configFilename))
   {
-    if (!SerialFlash.createErasable(configFilename, 65535))
+    File file = SD.open(configFilename, FILE_WRITE);
+    if (!file)
     {
       CoreLogging::writeLine("CoreSettings: ERROR, savetoStore, unable to create file %s", configFilename);
       return;
     }
   }
 
-  SerialFlashFile file = SerialFlash.open(configFilename);
-  file.erase();
+  file.close(); //close as w
+  file = SD.open(configFilename, FILE_WRITE);
+  file.flush();
   StaticJsonDocument<16384> doc;
   // Set the values in the document
   doc["version"] = liveSettings.version;
@@ -405,18 +407,18 @@ String CoreSettings::getRandomClashSound()
 
 void CoreSettings::printFile(const char* filen, boolean ignore)
 {
-  if (!SerialFlash.ready())
+  if (!SD.mediaPresent())
   {
     CoreLogging::writeLine("CoreSettings: ERROR, printFile, SeriaFlash Not Ready");
     return;
   }
-  if (!SerialFlash.exists(filen))
+  if (!SD.exists(filen))
   {
     CoreLogging::writeLine("CoreSettings: ERROR, printFile, %s does not exist", filen);
     return;
   }
   char buf[1];
-  SerialFlashFile file = SerialFlash.open(filen);
+  File file = SD.open(filen);
   while (file.available())
   {
     noInterrupts();
@@ -436,17 +438,17 @@ int32_t CoreSettings::getFileSize(const char* filen)
 {
   int32_t sz = -88;
 
-  if (!SerialFlash.ready())
+  if (!SD.mediaPresent())
   {
     CoreLogging::writeLine("CoreSettings: ERROR, SeriaFlash Not Ready");
     return -99;
   }
-  if (!SerialFlash.exists(filen))
+  if (!SD.exists(filen))
   {
     CoreLogging::writeLine("CoreSettings: ERROR, file %s does not exist", filen);
     return -1;
   }
-  SerialFlashFile file = SerialFlash.open(filen);
+  File file = SD.open(filen);
   sz = file.size();
   file.close();
 

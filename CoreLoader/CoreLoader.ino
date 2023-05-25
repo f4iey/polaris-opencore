@@ -2,6 +2,7 @@
 #include <Audio.h>
 #include <SPI.h>
 #include <SerialFlash.h>
+#include <SD.h>
 #include <Wire.h>
 
 // GUItool: begin automatically generated code
@@ -278,6 +279,14 @@ void setup()
   else
   {
     message("Flash connected.", true);
+  }
+  message("Initializing SD card...", true);
+  if (!SD.begin(CS_PIN)) {
+    message("No SD Card present, proceeding without it...", true);
+    //return;
+  }
+  else{
+    message("SD Card connected.", true);
   }
 
   AudioMemory(16);
@@ -725,6 +734,8 @@ void listFiles()
   mixer1.gain(0, 0.2);
 
   SerialFlash.opendir();
+  File root = SD.open("/");
+
 
   while (1)
   {
@@ -750,6 +761,60 @@ void listFiles()
       break; // no more files
     }
   }
+  // SD Card files if present
+  printDirectory(root, 0);
+}
+/*
+* Functions for listing SD Card files 
+*/
+
+void printDirectory(File dir, int numSpaces) {
+   while(true) {
+     File entry = dir.openNextFile();
+     if (! entry) {
+       //Serial.println("** no more files **");
+       break;
+     }
+     spaces(numSpaces);
+     SerialData.print(entry.name());
+     if (entry.isDirectory()) {
+       SerialData.println("/");
+       printDirectory(entry, numSpaces+2);
+     } else {
+       // files have sizes, directories do not
+       int n = log10f(entry.size());
+       if (n < 0) n = 10;
+       if (n > 10) n = 10;
+       spaces(50 - numSpaces - strlen(entry.name()) - n);
+       SerialData.print("  ");
+       SerialData.print(entry.size(), DEC);
+       DateTimeFields datetime;
+       if (entry.getModifyTime(datetime)) {
+         spaces(4);
+         printTime(datetime);
+       }
+       Serial.println();
+     }
+     entry.close();
+   }
+}
+
+void printTime(const DateTimeFields tm) {
+  const char *months[12] = {
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  };
+  if (tm.hour < 10) SerialData.print('0');
+  SerialData.print(tm.hour);
+  SerialData.print(':');
+  if (tm.min < 10) SerialData.print('0');
+  SerialData.print(tm.min);
+  SerialData.print("  ");
+  SerialData.print(tm.mon < 12 ? months[tm.mon] : "???");
+  SerialData.print(" ");
+  SerialData.print(tm.mday);
+  SerialData.print(", ");
+  SerialData.print(tm.year + 1900);
 }
 
 void spaces(int num)

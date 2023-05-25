@@ -23,15 +23,16 @@ CoreAudio& CoreAudio::begin(CoreSettings* cSet) {
   SPI.setSCK(SCK_PIN);
   SPI.setMOSI(SI_PIN);
   SPI.setMISO(SO_PIN);
-  SerialFlash.begin(CS_PIN);
+  //SerialFlash.begin(CS_PIN);
+  SD.begin(CS_PIN);
   moduleSettings = cSet;
   moduleSettings->init();
   patchSineMixer = new AudioConnection(soundSine, 0, mainMixer, CHANNEL_SINE);
-  patchFlashMixer = new AudioConnection(soundPlayFlashRaw, 0, mainMixer, CHANNEL_HUM);
-  patchFlashFXMixer = new AudioConnection(soundPlayFlashFXRaw, 0, mainMixer, CHANNEL_FX);
+  patchSdMixer = new AudioConnection(soundPlaySdRaw, 0, mainMixer, CHANNEL_HUM);
+  patchSdFXMixer = new AudioConnection(soundPlaySdFXRaw, 0, mainMixer, CHANNEL_FX);
   useSmoothSwing = checkSmoothSwing();
-  patchFlashSmoothSwingAMixer = new AudioConnection(soundPlayFlashSmoothSwingARaw, 0, mainMixer, CHANNEL_SMOOTH_SWING_A);
-  patchFlashSmoothSwingBMixer = new AudioConnection(soundPlayFlashSmoothSwingBRaw, 0, mainMixer, CHANNEL_SMOOTH_SWING_B);
+  patchSdSmoothSwingAMixer = new AudioConnection(soundPlaySdSmoothSwingARaw, 0, mainMixer, CHANNEL_SMOOTH_SWING_A);
+  patchSdSmoothSwingBMixer = new AudioConnection(soundPlaySdSmoothSwingBRaw, 0, mainMixer, CHANNEL_SMOOTH_SWING_B);
   patchMixerDac = new AudioConnection(mainMixer, outputDac);
   AudioMemory(AUDIO_BLOCK);
   mainMixer.gain(CHANNEL_HUM, currentVolume); // HUM
@@ -73,13 +74,13 @@ int CoreAudio::event( int id ) {
 void CoreAudio::action( int id ) {
   switch ( id ) {
     case ENT_IDLE:
-        if (!soundPlayFlashRaw.isPlaying())
+        if (!soundPlaySdRaw.isPlaying())
         {
           digitalWrite(POWER_AMP_PIN, LOW);
         }
       return;
     case LP_IDLE:
-        if (!soundPlayFlashRaw.isPlaying())
+        if (!soundPlaySdRaw.isPlaying())
         {
           digitalWrite(POWER_AMP_PIN, LOW);
         } 
@@ -112,32 +113,32 @@ void CoreAudio::action( int id ) {
       }
       mainMixer.gain(CHANNEL_HUM, currentVolume);
       mainMixer.gain(CHANNEL_FX, currentVolume);
-      soundPlayFlashRaw.play(moduleSettings->getRandomOnSound().c_str());
+      soundPlaySdRaw.play(moduleSettings->getRandomOnSound().c_str());
       humString = moduleSettings->getRandomHumSound();
       return;
     case LP_ARMED:
       originalVolume = currentVolume;
-      if (!soundPlayFlashRaw.isPlaying())
+      if (!soundPlaySdRaw.isPlaying())
       {
-        soundPlayFlashRaw.play(humString.c_str());
+        soundPlaySdRaw.play(humString.c_str());
       }
       if (useSmoothSwing)
       {
-        soundPlayFlashSmoothSwingARaw.stop();
-        soundPlayFlashSmoothSwingBRaw.stop();
+        soundPlaySdSmoothSwingARaw.stop();
+        soundPlaySdSmoothSwingBRaw.stop();
       }
       return;
     case ENT_CLASH:
-      if (soundPlayFlashRaw.isPlaying())
+      if (soundPlaySdRaw.isPlaying())
       {
-        soundPlayFlashRaw.stop();
+        soundPlaySdRaw.stop();
       }
       if (useSmoothSwing)
       {
-        soundPlayFlashSmoothSwingARaw.stop();
-        soundPlayFlashSmoothSwingBRaw.stop();
+        soundPlaySdSmoothSwingARaw.stop();
+        soundPlaySdSmoothSwingBRaw.stop();
       }
-      soundPlayFlashFXRaw.play(moduleSettings->getRandomClashSound().c_str());
+      soundPlaySdFXRaw.play(moduleSettings->getRandomClashSound().c_str());
       return;
     case ENT_SWING:
       if (useSmoothSwing)
@@ -146,13 +147,13 @@ void CoreAudio::action( int id ) {
       }
       else
       {
-        if (!soundPlayFlashFXRaw.isPlaying())
+        if (!soundPlaySdFXRaw.isPlaying())
         {
-          if (soundPlayFlashRaw.isPlaying())
+          if (soundPlaySdRaw.isPlaying())
           {
-            soundPlayFlashRaw.stop();
+            soundPlaySdRaw.stop();
           }
-          soundPlayFlashFXRaw.play(moduleSettings->getRandomSwingSound().c_str());
+          soundPlaySdFXRaw.play(moduleSettings->getRandomSwingSound().c_str());
         }        
       }
       return;
@@ -164,17 +165,17 @@ void CoreAudio::action( int id ) {
           resetSmoothSwing();
         }
         // keep HUM playing
-        if (!soundPlayFlashRaw.isPlaying())
+        if (!soundPlaySdRaw.isPlaying())
         {
-          soundPlayFlashRaw.play(humString.c_str());
+          soundPlaySdRaw.play(humString.c_str());
         }
-        if (!soundPlayFlashSmoothSwingARaw.isPlaying())
+        if (!soundPlaySdSmoothSwingARaw.isPlaying())
         {
-          soundPlayFlashSmoothSwingARaw.play(smoothSwingStringA.c_str());
+          soundPlaySdSmoothSwingARaw.play(smoothSwingStringA.c_str());
         }
-        if (!soundPlayFlashSmoothSwingBRaw.isPlaying())
+        if (!soundPlaySdSmoothSwingBRaw.isPlaying())
         {
-          soundPlayFlashSmoothSwingBRaw.play(smoothSwingStringB.c_str());
+          soundPlaySdSmoothSwingBRaw.play(smoothSwingStringB.c_str());
         }
         t1 = micros();
         delta = t1 - t0;
@@ -226,25 +227,25 @@ void CoreAudio::action( int id ) {
       }
       else
       {
-        if (!soundPlayFlashFXRaw.isPlaying())
+        if (!soundPlaySdFXRaw.isPlaying())
         {
-          if (soundPlayFlashRaw.isPlaying())
+          if (soundPlaySdRaw.isPlaying())
           {
-            soundPlayFlashRaw.stop();
+            soundPlaySdRaw.stop();
           }
-          soundPlayFlashFXRaw.play(moduleSettings->getRandomSwingSound().c_str());
+          soundPlaySdFXRaw.play(moduleSettings->getRandomSwingSound().c_str());
         }        
       }
       return;
     case ENT_DISARM:
       currentVolume = originalVolume;
-      soundPlayFlashFXRaw.stop();
+      soundPlaySdFXRaw.stop();
       if (useSmoothSwing)
       {
-        soundPlayFlashSmoothSwingARaw.stop();
-        soundPlayFlashSmoothSwingBRaw.stop();
+        soundPlaySdSmoothSwingARaw.stop();
+        soundPlaySdSmoothSwingBRaw.stop();
       }
-      soundPlayFlashRaw.play(moduleSettings->getRandomOffSound().c_str());
+      soundPlaySdRaw.play(moduleSettings->getRandomOffSound().c_str());
       return;
   }
 }
@@ -275,8 +276,8 @@ void CoreAudio::resetSmoothSwing()
 
 void CoreAudio::beep(int duration, float volume)
 {
-  soundPlayFlashFXRaw.stop();
-  soundPlayFlashRaw.stop();
+  soundPlaySdFXRaw.stop();
+  soundPlaySdRaw.stop();
   digitalWrite(POWER_AMP_PIN, HIGH);
   delay(50);
   mainMixer.gain(CHANNEL_SINE, volume);
@@ -292,8 +293,8 @@ void CoreAudio::set_mute()
 
 void CoreAudio::treeplebeep(int duration, float volume)
 {
-  soundPlayFlashFXRaw.stop();
-  soundPlayFlashRaw.stop();
+  soundPlaySdFXRaw.stop();
+  soundPlaySdRaw.stop();
   delay(100);
   digitalWrite(POWER_AMP_PIN, HIGH);
   delay(50);

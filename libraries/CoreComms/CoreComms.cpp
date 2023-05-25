@@ -657,9 +657,71 @@ String CoreComms::listFiles()
   lst += String(SerialFlash.blockSize());
   lst += " bytes\n";
 
+//SD Card
+  File root = SD.open("/");
+  lst += "--------\n\nSD Card:\n"
+  lst += printDirectory(root, 0);
   lst += char(ETX);
   return lst;
 }
+
+/*
+* Functions for listing SD Card files 
+*/
+
+String CoreComms::printDirectory(File dir, int numSpaces) {
+   String stdout = "";
+   while(true) {
+     File entry = dir.openNextFile();
+     if (! entry) {
+       //Serial.println("** no more files **");
+       break;
+     }
+     stdout += spaces(numSpaces);
+     stdout += entry.name();
+     if (entry.isDirectory()) {
+       stdout += "/\n";
+        stdout += printDirectory(entry, numSpaces+2);
+     } else {
+       // files have sizes, directories do not
+       int n = log10f(entry.size());
+       if (n < 0) n = 10;
+       if (n > 10) n = 10;
+       stdout += spaces(50 - numSpaces - strlen(entry.name()) - n);
+       stdout += "  ";
+       stdout += entry.size();
+       DateTimeFields datetime;
+       if (entry.getModifyTime(datetime)) {
+         stdout += spaces(4);
+         stdout += printTime(datetime);
+       }
+       stdout += "\n"
+     }
+     entry.close();
+     return stdout;
+   }
+}
+
+void CoreComms::printTime(const DateTimeFields tm) {
+  String str = "";
+  const char *months[12] = {
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
+  };
+  if (tm.hour < 10) str += '0';
+  str += tm.hour;
+  str += ':';
+  if (tm.min < 10) str += '0';
+  str +=tm.min;
+  str += "  ";
+  str += tm.mon < 12 ? months[tm.mon] : "???";
+  str +=" ";
+  str +=tm.mday;
+  str += ", ";
+  str += tm.year + 1900;
+  return str;
+}
+
 String CoreComms::spaces(int num)
 { String out="";
   for (int i = 0; i < num; i++)
@@ -669,33 +731,11 @@ String CoreComms::spaces(int num)
 }
 uint32_t CoreComms::getStorageCapacity()
 { 
-  SerialFlash.opendir();
-  unsigned char buf[256];
-  SerialFlash.readID(buf);
-  return SerialFlash.capacity(buf);
+  return (uint32_t)SD.totalSize();
 }
 uint32_t CoreComms::getStorageUsed()
 {
-  //must traverse files find last one and add it's size
-  SerialFlash.opendir();
-  boolean moreFiles=true;
-  uint32_t maxAddr=0;
-  while (moreFiles)
-  {
-    refreshWatchdog();
-    char filename[64];
-    uint32_t filesize;
-    if (SerialFlash.readdir(filename, sizeof(filename), filesize))
-    {
-      SerialFlashFile ff = SerialFlash.open(filename);
-      maxAddr= max(maxAddr, ff.getFlashAddress()+ff.size());
-    }
-    else
-    {
-      moreFiles=false;
-    }
-  }
-  return maxAddr;
+  return (uint32_t)SD.usedSize();
 }
 uint32_t CoreComms::getStorageFree()
 {

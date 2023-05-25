@@ -4,6 +4,7 @@
 #include "CoreSettings.h"
 #include <CoreLogging.h>
 #include <SerialFlash.h>
+#include <SD.h>
 
 #define BAUD_RATE 9600
 static constexpr int STX = 0x02;

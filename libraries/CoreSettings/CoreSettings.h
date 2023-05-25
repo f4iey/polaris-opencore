@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <SerialFlash.h>
+#include <SD.h>
 
 #include "ArduinoJson.h"
 #include "CoreLogging.h"
