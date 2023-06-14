@@ -30,7 +30,16 @@ int CoreMotion::event( int id ) {
     case EVT_VOLUME:
       return int1Status > 0;
     case EVT_DISARM:
-      return timer_horizontal.expired( this );
+      return (
+        timer_horizontal.expired( this ))
+        ||
+        (
+        (this->state() == this->ARMED || this->state() == this->SWING) && 
+        abs(GyroZ) > ARM_ALT_THRESHOLD_Z && 
+        (!timer_no_vertical.expired( this )) &&
+        swingSpeed < SWING_THRESHOLD_HIGH &&
+        ((digitalRead(USB_PIN) == LOW) || DEBUG)
+      );     
     case EVT_SWING:
       return (swingSpeed > SWING_THRESHOLD ||
               rollSpeed > ROLL_SPEED_THRESHOLD_HIGH);
@@ -49,7 +58,6 @@ int CoreMotion::event( int id ) {
         this->state() == this->IDLE && 
         abs(GyroZ) > ARM_ALT_THRESHOLD_Z && 
         swingSpeed < SWING_THRESHOLD_HIGH &&
-        (!timer_no_vertical.expired( this )) &&
         ((digitalRead(USB_PIN) == LOW) || DEBUG)
       );
     case EVT_ARM:
@@ -79,6 +87,7 @@ int CoreMotion::event( int id ) {
 void CoreMotion::action( int id ) {
   switch ( id ) {
     case ENT_IDLE:
+      firstArm = false;
       push( connectors, ON_IDLE, 0, 0, 0 );
       timer_vertical.setFromNow(this,0);
       timer_no_vertical.setFromNow(this,0);
@@ -122,6 +131,10 @@ void CoreMotion::action( int id ) {
       }
       return;
     case ENT_DISARM:
+      if(!firstArm){
+	firstArm = true;
+	return;
+      }
       push( connectors, ON_DISARM, 0, 0, 0 );
       timer_horizontal.setFromNow(this,TIME_FOR_REARM);
       return;
