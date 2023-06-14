@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef ENABLE_NEOPIXEL
-  #include <Adafruit_NeoPixel.h>
-#endif
-
 #include <Automaton.h>
 #include "CoreLogging.h"
 #include "CoreSettings.h"
@@ -65,13 +61,6 @@ class CoreLed: public Machine {
   ColorLed clashColor;
   ColorLed swingColor;
   ColorLed singleStepColor;
-  #ifdef ENABLE_NEOPIXEL
-    void NeoOpen();
-    void NeoClose();
-    static constexpr int NEO_PIN = 3;
-    static constexpr int NEO_NUMPIXELS = 144;
-    static constexpr int NEO_BRIGHT = 127;
-  #endif
   static constexpr int BLINK_RECHARGE_STATUS_TIMER = 8000;
   static constexpr int BLINK_RECHARGED_STATUS_TIMER = 12000;
   static constexpr int CHARGE_SEQUENCE_BLINK_TIME = 300;
